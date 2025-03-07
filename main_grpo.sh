@@ -1,14 +1,14 @@
 set -x
-MODEL_PATH=/usr/project/xtmp/rx55/projects/long_cot/results/logic-rl/actor/global_step_200
+MODEL_PATH=Qwen/Qwen2.5-7B-Instruct-1M
 export VLLM_ATTENTION_BACKEND=XFORMERS
 python3 -m verl.trainer.main_ppo \
     algorithm.adv_estimator=grpo \
     data.train_files=/usr/project/xtmp/rx55/projects/long_cot/src/Logic-RL/data/kk/instruct/5ppl/train.parquet \
     data.val_files=/usr/project/xtmp/rx55/projects/long_cot/src/Logic-RL/data/kk/instruct/5ppl/test.parquet \
-    data.train_batch_size=4 \
-    data.val_batch_size=4 \
+    data.train_batch_size=2 \
+    data.val_batch_size=2 \
     data.max_prompt_length=400 \
-    data.max_response_length=2048 \
+    data.max_response_length=4096 \
     actor_rollout_ref.model.path=$MODEL_PATH\
     actor_rollout_ref.actor.optim.lr=4e-7 \
     actor_rollout_ref.model.use_remove_padding=True \
@@ -24,7 +24,7 @@ python3 -m verl.trainer.main_ppo \
     actor_rollout_ref.rollout.log_prob_micro_batch_size=160 \
     actor_rollout_ref.rollout.tensor_model_parallel_size=1 \
     actor_rollout_ref.rollout.name=vllm \
-    actor_rollout_ref.rollout.temperature=1.2 \
+    actor_rollout_ref.rollout.temperature=0.7 \
     actor_rollout_ref.rollout.gpu_memory_utilization=0.7 \
     actor_rollout_ref.rollout.n=24 \
     actor_rollout_ref.ref.log_prob_micro_batch_size=160 \
@@ -36,8 +36,8 @@ python3 -m verl.trainer.main_ppo \
     trainer.experiment_name='Qwen-7B' \
     trainer.n_gpus_per_node=4 \
     trainer.nnodes=1 \
-    trainer.default_local_dir=/usr/project/xtmp/rx55/projects/long_cot/results/logic-rl_p2 \
+    trainer.default_local_dir=/usr/project/xtmp/rx55/projects/long_cot/results/logic-rl_5ppl \
     trainer.default_hdfs_dir=null \
-    trainer.save_freq=10 \
-    trainer.test_freq=10 \
-    trainer.total_epochs=5 $@ 2>&1 | tee /usr/project/xtmp/rx55/projects/long_cot/grpo_p2.log
+    trainer.save_freq=25 \
+    trainer.test_freq=25 \
+    trainer.total_epochs=8 $@ 2>&1 | tee /usr/project/xtmp/rx55/projects/long_cot/grpo_ppl5.log
