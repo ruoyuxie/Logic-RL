@@ -11,19 +11,25 @@ def make_prefix(dp, template_type):
     quiz = dp['quiz']
     if template_type == 'base':
         prefix = f"""The user asks a question, and the Assistant solves it.The assistant first thinks about the reasoning process in the mind and then provides the user with the final answer. The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., <think> reasoning process here </think><answer> answer here </answer>. Now the user asks you to solve a logical reasoning problem. After thinking, when you finally reach a conclusion, clearly state the identity of each character within <answer> </answer> tags. List the identity of each person one by one, for example, <answer> (1) Zoey is a knight\n(2) Oliver is a knight\n(3)... </answer>.\n\nUser:{quiz}\nAssistant: <think>"""
-    elif template_type == 'qwen-instruct':
+    elif template_type == 'normal':
         prefix = f"""<|im_start|>system\nYou are a helpful assistant. The assistant first thinks about the reasoning process in the mind and then provides the user with the answer. The reasoning process and answer are enclosed within <think> </think> and<answer> </answer> tags, respectively, i.e., <think> reasoning process here </think><answer> answer here </answer>.  Now the user asks you to solve a logical reasoning problem. After thinking, when you finally reach a conclusion, clearly state the identity of each character within <answer> </answer> tags. i.e., <answer> (1) Zoey is a knight\n(2) ... </answer>.\n<|im_end|>\n<|im_start|>user\n{quiz}\n<|im_end|>\n<|im_start|>assistant\n<think>"""
+    elif template_type == 'inter':
+        prefix = f"""<|im_start|>system\nA conversation between User and Assistant. The Assistant solves problems by interleaving reasoning and partial answers. The Assistant:
+1. Shows their reasoning process within <think> </think> tags.
+2. Provides meaningful partial answers within <answer> </answer> tags as soon as they become confident about each conclusion.
+3. Continues this pattern of <think>...</think><answer>...</answer> until reaching the final solution.\nThe user now will ask a logical reasoning puzzle. The Assistant analyzes each character's statements and determines their identity (knight/knave/etc.). After interleaving reasoining/partial answering, conclude the final answer in this format at the end:\n<answer> (1) Zoey is a knight\n(2) Xander is a knave\n(3) ... </answer>.\n<|im_end|>\n<|im_start|>user\n{quiz}\n<|im_end|>\n<|im_start|>assistant\n<think>"""
+
     return prefix
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--local_dir', default='/home/t2vg-a100-G4-43/data/kk/instruct/3ppl')
+    parser.add_argument('--local_dir', default='/usr/project/xtmp/rx55/projects/long_cot/src/Logic-RL/data/kk/inter/5ppl')
     parser.add_argument('--hdfs_dir', default=None)
-    parser.add_argument('--data_path', default='/home/t2vg-a100-G4-43/mem-kk-logic/kk_train_data/3ppl.jsonl')
+    parser.add_argument('--data_path', default='/usr/project/xtmp/rx55/projects/long_cot/src/Logic-RL/data/kk/raw_data/5ppl.jsonl')
     parser.add_argument('--train_size', type=int, default=900)
     parser.add_argument('--test_size', type=int, default=100)
-    parser.add_argument('--template_type', type=str, default='qwen-instruct')
-    
+    parser.add_argument('--template_type', type=str, default='normal') # normal | base | inter
+     
     args = parser.parse_args()
     
     data_source = 'kk_logic'

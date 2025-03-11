@@ -62,7 +62,30 @@ def eval_subject(args, subject, llm, test_records, kk_proc, exist_result_records
             prompts.append(prompt)
             labels.append(label)
             question = prompt.split("### Question:")[1].strip().split("### Answer:")[0].strip()
-            new_prompt = f"""<|im_start|>system\nYou are a helpful assistant. The assistant first thinks about the reasoning process in the mind and then provides the user with the answer. The reasoning process and answer are enclosed within <think> </think> and<answer> </answer> tags, respectively, i.e., <think> reasoning process here </think><answer> answer here </answer>.  Now the user asks you to solve a logical reasoning problem. After thinking, when you finally reach a conclusion, clearly state the identity of each character within <answer> </answer> tags. i.e., <answer> (1) ...\n(2) ... </answer>.\n<|im_end|>\n<|im_start|>user\n{question}\n<|im_end|>\n<|im_start|>assistant\n<think>"""
+            # new_prompt = f"""<|im_start|>system\nYou are a helpful assistant. The assistant first thinks about the reasoning process in the mind and then provides the user with the answer. The reasoning process and answer are enclosed within <think> </think> and<answer> </answer> tags, respectively, i.e., <think> reasoning process here </think><answer> answer here </answer>.  Now the user asks you to solve a logical reasoning problem. After thinking, when you finally reach a conclusion, clearly state the identity of each character within <answer> </answer> tags. i.e., <answer> (1) ...\n(2) ... </answer>.\n<|im_end|>\n<|im_start|>user\n{question}\n<|im_end|>\n<|im_start|>assistant\n<think>"""
+            new_prompt = f"""<|im_start|>system
+A conversation between User and Assistant. The Assistant solves problems by interleaving reasoning and partial answers. The Assistant:
+1. Shows their reasoning process within <think> </think> tags
+2. Provides meaningful partial answers within <answer> </answer> tags as soon as they become confident about each conclusion
+3. Continues this pattern of <think>...</think><answer>...</answer> until reaching the final solution
+
+The user now will give a logical reasoning puzzle, the Assistant analyzes each character's statements and determines their identity (knight/knave/etc.). After interleaving reasoining/partial answering, conclude the final answer in this format at the end:
+<answer>
+(1) Zoey is a knight
+(2) Xander is a knave
+...
+</answer>
+
+Each partial answer should represent a meaningful conclusion the Assistant has reached, not just repeating the reasoning.
+<|im_end|>
+
+<|im_start|>user
+{question}
+<|im_end|>
+
+<|im_start|>assistant
+<think>
+"""
             new_prompts.append(new_prompt)
     # Batch inference using vLLM
     sampling_params = SamplingParams(
