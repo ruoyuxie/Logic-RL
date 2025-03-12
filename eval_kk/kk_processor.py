@@ -1,7 +1,7 @@
 import numpy as np
 from kk_prompt import system_instruction, demonstration_2char, system_instruction_no_reason, demonstration_2char_no_reason
 
-from compute_score import extract_solution, parse_solution_text_format, parse_model_answer, validate_response_structure
+# from ..verl.utils.reward_score.kk import extract_solution, parse_model_answer, validate_response_structure, parse_solution_text_format
 
 def num_tokens_from_string(string):
     import tiktoken

@@ -95,6 +95,61 @@ class RewardManager():
 import ray
 import hydra
 
+def debug_setup():
+    """Set up environment for debugging without using the command line"""
+    import os
+    import sys
+    
+    # Set required environment variables
+    os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
+    os.environ["VLLM_ATTENTION_BACKEND"] = "XFORMERS"
+    
+    # Create Hydra compatible command-line arguments
+    debug_args = [
+        "algorithm.adv_estimator=grpo",
+        "data.train_files=/usr/project/xtmp/rx55/projects/long_cot/src/Logic-RL/data/kk/inter/5ppl/train.parquet",
+        "data.val_files=/usr/project/xtmp/rx55/projects/long_cot/src/Logic-RL/data/kk/inter/5ppl/test.parquet",
+        "data.train_batch_size=4",
+        "data.val_batch_size=4",
+        "data.max_prompt_length=400",
+        "data.max_response_length=2500",
+        "actor_rollout_ref.model.path=Qwen/Qwen2.5-3B-Instruct",
+        "actor_rollout_ref.actor.optim.lr=4e-7",
+        "actor_rollout_ref.model.use_remove_padding=True",
+        "actor_rollout_ref.actor.use_kl_loss=True",
+        "actor_rollout_ref.actor.kl_loss_coef=0.001",
+        "actor_rollout_ref.actor.kl_loss_type=low_var_kl",
+        "actor_rollout_ref.model.enable_gradient_checkpointing=True",
+        "actor_rollout_ref.actor.fsdp_config.param_offload=True",
+        "actor_rollout_ref.actor.fsdp_config.grad_offload=True",
+        "actor_rollout_ref.actor.fsdp_config.optimizer_offload=True",
+        "actor_rollout_ref.actor.ppo_mini_batch_size=4",
+        "actor_rollout_ref.actor.ppo_micro_batch_size=2",
+        "actor_rollout_ref.rollout.log_prob_micro_batch_size=2",
+        "actor_rollout_ref.ref.log_prob_micro_batch_size=2",
+        "actor_rollout_ref.rollout.name=vllm",
+        "actor_rollout_ref.rollout.temperature=0.7",
+        "actor_rollout_ref.rollout.gpu_memory_utilization=0.5",
+        "actor_rollout_ref.rollout.n=2",
+        "actor_rollout_ref.ref.fsdp_config.param_offload=True",
+        "algorithm.kl_ctrl.kl_coef=0.001",
+        "trainer.critic_warmup=0",
+        "trainer.logger=[wandb]",
+        "trainer.project_name=GRPO_logic_KK",
+        "trainer.experiment_name=Qwen-7B",
+        "trainer.default_local_dir=/usr/project/xtmp/rx55/projects/long_cot/results/logic-rl_5ppl_test",
+        "trainer.n_gpus_per_node=1",
+        "actor_rollout_ref.rollout.tensor_model_parallel_size=1",
+        "trainer.nnodes=1",
+        "trainer.default_hdfs_dir=null",
+        "trainer.save_freq=20",
+        "trainer.test_freq=20",
+        "trainer.total_epochs=120",
+    ]
+    
+    # Set these as command line arguments for Hydra
+    sys.argv = [sys.argv[0]] + debug_args
+
 
 @hydra.main(config_path='config', config_name='ppo_trainer', version_base=None)
 def main(config):
@@ -102,9 +157,15 @@ def main(config):
         # this is for local ray cluster
         ray.init(runtime_env={'env_vars': {'TOKENIZERS_PARALLELISM': 'true', 'NCCL_DEBUG': 'WARN'}})
 
-    ray.get(main_task.remote(config))
+    # For debugging - direct call to main_task
+    if os.environ.get("VS_CODE_DEBUG", "False") == "True":
+        main_task(config)
+    else:
+        # Normal execution with Ray
+        ray.get(main_task.remote(config))
 
 
+# Comment out the @ray.remote decorator temporarily
 @ray.remote
 def main_task(config):
     from verl.utils.fs import copy_local_path_from_hdfs
@@ -190,6 +251,15 @@ def main_task(config):
     trainer.init_workers()
     trainer.fit()
 
-
 if __name__ == '__main__':
+    import os
+    
+    # Set this environment variable to True when debugging
+    os.environ["VS_CODE_DEBUG"] = "False"
+    
+    # Call setup function to prepare debugging environment
+    if os.environ.get("VS_CODE_DEBUG", "False") == "True":
+        debug_setup()
+    
+    # Then call the main function as usual
     main()

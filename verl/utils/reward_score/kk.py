@@ -1,35 +1,6 @@
 import re
 from typing import Dict, Tuple, Optional
 
-def extract_solution(solution_str: str) -> Tuple[Optional[str], str]:
-    """Extracts the final answer from the model's response string.
-    
-    Args:
-        solution_str: Raw response string from the language model
-        
-    Returns:
-        Tuple containing (extracted_answer, processed_string)
-    """
-    # Split response to isolate assistant output
-    if "Assistant:" in solution_str:
-        processed_str = solution_str.split("Assistant:", 1)[1]
-    elif "<|im_start|>assistant" in solution_str:
-        processed_str = solution_str.split("<|im_start|>assistant", 1)[1]
-    else:
-        print("[Error] Failed to locate model response header")
-        return None, solution_str
-
-    # Extract final answer using XML-style tags
-    answer_pattern = r'<answer>(.*?)</answer>'
-    matches = list(re.finditer(answer_pattern, processed_str, re.DOTALL))
-    
-    if not matches:
-        print("[Error] No valid answer tags found")
-        return None, processed_str
-        
-    final_answer = matches[-1].group(1).strip()
-    return final_answer, processed_str
-
 def parse_solution_text_format(solution_text: str) -> Dict[str, str]:
     """Parses ground truth solution text into status dictionary.
     
@@ -96,36 +67,101 @@ def parse_model_answer(answer_text: str, expected_names: list) -> Optional[Dict[
     
     return status_dict
 
+def compute_score(solution_str: str, 
+                 ground_truth: Dict[str, str],
+                 format_reward: int = 1,
+                 answer_reward: float = 1.0) :
+    """Computes comprehensive score for model response.
+    
+    Args:
+        solution_str: Raw model response string
+        ground_truth: Dictionary containing ground truth data
+        format_reward: Points awarded/deducted for format correctness
+        answer_reward: Points awarded/deducted for answer correctness
+        
+    Returns:
+        Total score (sum of format and answer rewards)
+    """
+    print("\n" + "="*80)
+    print(" Processing New Sample ".center(80, '='))
+    
+    # Parse ground truth data
+    solution_text = ground_truth.get('solution_text_format', '')
+    gt_status = parse_solution_text_format(solution_text)
+    expected_names = list(gt_status.keys())
+    # print(f"[Ground Truth] Final identities: {gt_status}")
+
+    # Extract model answer
+    answer_text, processed_str = extract_solution(solution_str)
+    print(f"\n[Model Response]\n{processed_str}")
+
+    # Validate response structure
+    format_correct = validate_response_structure(processed_str)
+    format_score = format_reward if format_correct else -abs(format_reward)
+    print(f"\n  Format validation: {'PASS' if format_correct else 'FAIL'}")
+    print(f"  Format score: {format_score}")
+
+    # Validate answer content
+    answer_score = 0
+    if format_correct and answer_text:
+        pred_status = parse_model_answer(answer_text, expected_names)
+        if pred_status:
+            print(f"\n[Content Validation]")
+            print(f"  Expected: {gt_status}")
+            print(f"  Predicted: {pred_status}")
+            
+            if pred_status == gt_status:
+                answer_score = 2
+                print("  Content validation: FULL MATCH")
+            else:
+                answer_score = -1.5
+                print("  Content validation: MISMATCH")
+        else:
+            answer_score = -2
+            print( "Fail to parse answer")
+    else:
+        answer_score = -2
+        print("\n[Content Validation] Skipped due to format errors or missing answer")
+
+    total_score = format_score + answer_score
+    print("\n" + "-"*80)
+    print(f" Final Score ".center(80, '-'))
+    print(f"  Format: {format_score}")
+    print(f"  Answer: {answer_score}")
+    print(f"  Total: {total_score}")
+    print("="*80 + "\n")
+
+    return total_score
 
 
-def validate_response_structure(processed_str: str) -> bool:
-    processed_str = processed_str.strip()
-    pos = 0
-    while pos < len(processed_str):
-        if not processed_str.startswith("<think>", pos):
-            return False
-        pos += len("<think>")
-        end_think = processed_str.find("</think>", pos)
-        if end_think == -1:
-            return False
-        pos = end_think + len("</think>")
+# def extract_solution(solution_str: str) -> Tuple[Optional[str], str]:
+#     """Extracts the final answer from the model's response string.
+    
+#     Args:
+#         solution_str: Raw response string from the language model
         
-        # Skip any whitespace between tags.
-        while pos < len(processed_str) and processed_str[pos].isspace():
-            pos += 1
+#     Returns:
+#         Tuple containing (extracted_answer, processed_string)
+#     """
+#     # Split response to isolate assistant output
+#     if "Assistant:" in solution_str:
+#         processed_str = solution_str.split("Assistant:", 1)[1]
+#     elif "<|im_start|>assistant" in solution_str:
+#         processed_str = solution_str.split("<|im_start|>assistant", 1)[1]
+#     else:
+#         print("[Error] Failed to locate model response header")
+#         return None, solution_str
+
+#     # Extract final answer using XML-style tags
+#     answer_pattern = r'<answer>(.*?)</answer>'
+#     matches = list(re.finditer(answer_pattern, processed_str, re.DOTALL))
+    
+#     if not matches:
+#         print("[Error] No valid answer tags found")
+#         return None, processed_str
         
-        if not processed_str.startswith("<answer>", pos):
-            return False
-        pos += len("<answer>")
-        end_answer = processed_str.find("</answer>", pos)
-        if end_answer == -1:
-            return False
-        pos = end_answer + len("</answer>")
-        
-        # Skip any trailing whitespace before next block.
-        while pos < len(processed_str) and processed_str[pos].isspace():
-            pos += 1
-    return True
+#     final_answer = matches[-1].group(1).strip()
+#     return final_answer, processed_str
 
 
 
@@ -171,68 +207,64 @@ def validate_response_structure(processed_str: str) -> bool:
 
 #     return validation_passed
 
-def compute_score(solution_str: str, 
-                 ground_truth: Dict[str, str],
-                 format_reward: int = 1,
-                 answer_reward: float = 1.0) :
-    """Computes comprehensive score for model response.
+
+def extract_solution(solution_str: str) -> Tuple[Optional[str], str]:
+    """Extracts the final answer and processes the response string.
     
     Args:
-        solution_str: Raw model response string
-        ground_truth: Dictionary containing ground truth data
-        format_reward: Points awarded/deducted for format correctness
-        answer_reward: Points awarded/deducted for answer correctness
+        solution_str: Raw response string from the language model
         
     Returns:
-        Total score (sum of format and answer rewards)
+        Tuple containing (extracted_answer, processed_string)
     """
-    print("\n" + "="*80)
-    print(" Processing New Sample ".center(80, '='))
-    
-    # Parse ground truth data
-    solution_text = ground_truth.get('solution_text_format', '')
-    gt_status = parse_solution_text_format(solution_text)
-    expected_names = list(gt_status.keys())
-    print(f"[Ground Truth] Final identities: {gt_status}")
-
-    # Extract model answer
-    answer_text, processed_str = extract_solution(solution_str)
-    print(f"\n[Model Response]\n{processed_str}")
-
-    # Validate response structure
-    format_correct = validate_response_structure(processed_str)
-    format_score = format_reward if format_correct else -abs(format_reward)
-    print(f"\n  Format validation: {'PASS' if format_correct else 'FAIL'}")
-    print(f"  Format score: {format_score}")
-
-    # Validate answer content
-    answer_score = 0
-    if format_correct and answer_text:
-        pred_status = parse_model_answer(answer_text, expected_names)
-        if pred_status:
-            print(f"\n[Content Validation]")
-            print(f"  Expected: {gt_status}")
-            print(f"  Predicted: {pred_status}")
-            
-            if pred_status == gt_status:
-                answer_score = 2
-                print("  Content validation: FULL MATCH")
-            else:
-                answer_score = -1.5
-                print("  Content validation: MISMATCH")
-        else:
-            answer_score = -2
-            print( "Fail to parse answer")
+    # Clean up the input string
+    if "Assistant:" in solution_str:
+        processed_str = solution_str.split("Assistant:", 1)[1].strip()
+    elif "<|im_start|>assistant" in solution_str:
+        processed_str = solution_str.split("<|im_start|>assistant", 1)[1].strip().replace("<|im_end|>", "")
     else:
-        answer_score = -2
-        print("\n[Content Validation] Skipped due to format errors or missing answer")
+        print("[Error] Failed to locate model response header")
+        return None, solution_str
 
-    total_score = format_score + answer_score
-    print("\n" + "-"*80)
-    print(f" Final Score ".center(80, '-'))
-    print(f"  Format: {format_score}")
-    print(f"  Answer: {answer_score}")
-    print(f"  Total: {total_score}")
-    print("="*80 + "\n")
+    # Extract the final answer from the last <answer> block
+    answer_pattern = r'<answer>(.*?)</answer>'
+    matches = list(re.finditer(answer_pattern, processed_str, re.DOTALL))
+    
+    if not matches:
+        print("[Error] No valid answer tags found")
+        return None, processed_str
+        
+    final_answer = matches[-1].group(1).strip()
+    
+    return final_answer, processed_str
 
-    return total_score
+
+def validate_response_structure(processed_str: str) -> bool:
+    processed_str = processed_str.strip()
+    pos = 0
+    while pos < len(processed_str):
+        if not processed_str.startswith("<think>", pos):
+            return False
+        pos += len("<think>")
+        end_think = processed_str.find("</think>", pos)
+        if end_think == -1:
+            return False
+        pos = end_think + len("</think>")
+        
+        # Skip any whitespace between tags.
+        while pos < len(processed_str) and processed_str[pos].isspace():
+            pos += 1
+        
+        if not processed_str.startswith("<answer>", pos):
+            return False
+        pos += len("<answer>")
+        end_answer = processed_str.find("</answer>", pos)
+        if end_answer == -1:
+            return False
+        pos = end_answer + len("</answer>")
+        
+        # Skip any trailing whitespace before next block.
+        while pos < len(processed_str) and processed_str[pos].isspace():
+            pos += 1
+    return True
+
