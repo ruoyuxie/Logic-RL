@@ -9,7 +9,7 @@ def extract_solution(solution_str: str) -> Tuple[Optional[str], str]:
     
     Args:
         solution_str: Raw response string from the language model
-        
+    
     Returns:
         Tuple containing (extracted_answer, processed_string)
     """

@@ -1,5 +1,5 @@
 set -x
-MODEL_PATH=/usr/project/xtmp/rx55/projects/long_cot/results/logic-rl_5ppl_256_p1/actor/global_step_30
+MODEL_PATH=/usr/project/xtmp/rx55/projects/long_cot/results/logic-rl_5ppl_256_p2/actor/global_step_680
 PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 export VLLM_ATTENTION_BACKEND=XFORMERS
 python3 -m verl.trainer.main_ppo \
@@ -9,7 +9,7 @@ python3 -m verl.trainer.main_ppo \
     data.train_batch_size=32 \
     data.val_batch_size=32 \
     data.max_prompt_length=400 \
-    data.max_response_length=2500 \
+    data.max_response_length=4000 \
     actor_rollout_ref.model.path=$MODEL_PATH\
     actor_rollout_ref.actor.optim.lr=4e-7 \
     actor_rollout_ref.model.use_remove_padding=True \
@@ -26,16 +26,16 @@ python3 -m verl.trainer.main_ppo \
     actor_rollout_ref.ref.log_prob_micro_batch_size=4 \
     actor_rollout_ref.rollout.tensor_model_parallel_size=4 \
     actor_rollout_ref.rollout.name=vllm \
-    actor_rollout_ref.rollout.temperature=1.2 \
+    actor_rollout_ref.rollout.temperature=0.7 \
     actor_rollout_ref.rollout.gpu_memory_utilization=0.5 \
-    actor_rollout_ref.rollout.n=16 \
+    actor_rollout_ref.rollout.n=12 \
     actor_rollout_ref.ref.fsdp_config.param_offload=True \
     algorithm.kl_ctrl.kl_coef=0.001 \
     trainer.critic_warmup=0 \
     trainer.logger=['wandb'] \
     trainer.project_name='GRPO_logic_KK' \
     trainer.experiment_name='Qwen-7B' \
-    trainer.default_local_dir=/usr/project/xtmp/rx55/projects/long_cot/results/logic-rl_5ppl_256_p2\
+    trainer.default_local_dir=/usr/project/xtmp/rx55/projects/long_cot/results/logic-rl_5ppl_256_p3\
     trainer.n_gpus_per_node=4 \
     trainer.nnodes=1 \
     trainer.default_hdfs_dir=null \
