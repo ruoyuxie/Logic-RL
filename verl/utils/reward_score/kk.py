@@ -147,7 +147,7 @@ def extract_solution(solution_str: str) -> Tuple[Optional[str], str]:
     if "Assistant:" in solution_str:
         processed_str = solution_str.split("Assistant:", 1)[1]
     elif "<|im_start|>assistant" in solution_str:
-        processed_str = solution_str.split("<|im_start|>assistant", 1)[1]
+        processed_str = solution_str.split("<|im_start|>assistant", 1)[1].replace("<|im_end|>", "")
     else:
         print("[Error] Failed to locate model response header")
         return None, solution_str

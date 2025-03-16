@@ -30,24 +30,25 @@ BASE_CONFIG="\
     trainer.critic_warmup=0 \
     trainer.logger=['wandb'] \
     trainer.project_name='GRPO_logic_KK' \
-    trainer.n_gpus_per_node=8 \
+    trainer.n_gpus_per_node=4 \
     trainer.nnodes=1 \
     trainer.save_freq=60 \
     trainer.test_freq=10 \
     trainer.total_epochs=1"
 
 # Define the ppl values for curriculum learning
-PPL_VALUES="3 4 5 6 7"
+# PPL_VALUES="3 4 5 6 7"
+PPL_VALUES="3 4"
 
 # Initial model path
-MODEL_PATH="Qwen2.5-7B-Instruct-1M"
+MODEL_PATH="Qwen/Qwen2.5-7B-Instruct-1M"
 EXPERIMENT_NAME="RF++-Qwen-7B-1M-xppl-curriculum-001"
 
 for ppl in $PPL_VALUES; do
     echo "Starting training for ${ppl}ppl"
 
-    TRAIN_FILE="./data/kk/instruct/${ppl}ppl/train.parquet"
-    VAL_FILE="./data/kk/instruct/5ppl/test.parquet" # standard bench
+    TRAIN_FILE="/usr/project/xtmp/rx55/projects/long_cot/src/Logic-RL/data/kk/instruct/${ppl}ppl/train.parquet"
+    VAL_FILE="/usr/project/xtmp/rx55/projects/long_cot/src/Logic-RL/data/kk/instruct/5ppl/test.parquet" # standard bench
     
     # Define experiment name for this stage
     CURRENT_EXPERIMENT_NAME="${EXPERIMENT_NAME}-${ppl}ppl"
@@ -65,7 +66,7 @@ for ppl in $PPL_VALUES; do
     eval ${COMMAND}
 
     # Update model path to the checkpoint of the current stage
-    MODEL_PATH="Logic-RL/checkpoints/${CURRENT_EXPERIMENT_NAME}/actor" # checkpoint path here
+    MODEL_PATH="/usr/project/xtmp/rx55/projects/long_cot/results/logic-rl_curriculum/${CURRENT_EXPERIMENT_NAME}/actor" # checkpoint path here
 done
 
 echo "Curriculum learning finished!"
