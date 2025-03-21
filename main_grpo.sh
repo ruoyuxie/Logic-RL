@@ -41,4 +41,4 @@ python3 -m verl.trainer.main_ppo \
     trainer.default_hdfs_dir=null \
     trainer.save_freq=20 \
     trainer.test_freq=20 \
-    trainer.total_epochs=120
+    trainer.total_epochs=30
